@@ -26,7 +26,7 @@ def close():
     yield
 
 
-def scheduler(*tasks):
+def schedule(*tasks):
     before = datetime.utcnow()
     print(before, 'scheduling begin')
     while tasks:
@@ -56,5 +56,5 @@ def fan_out():
     return [create(), write(), close()]
 
 
-scheduler(chain())
-scheduler(*fan_out())
+schedule(chain())
+schedule(*fan_out())
