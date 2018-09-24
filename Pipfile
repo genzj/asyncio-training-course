@@ -9,6 +9,7 @@ numpy = "*"
 pandas = "*"
 "gprof2dot" = "*"
 flask = "*"
+dnspython = "*"
 
 [dev-packages]
 
