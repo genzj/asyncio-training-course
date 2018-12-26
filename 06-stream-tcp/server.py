@@ -3,9 +3,8 @@ import asyncio
 import json
 
 
-@asyncio.coroutine
-def handle_add(reader, writer):
-    data = yield from reader.read(100)
+async def handle_add(reader, writer):
+    data = await reader.read(100)
     message = json.loads(data)
 
     addr = writer.get_extra_info('peername')
@@ -17,7 +16,7 @@ def handle_add(reader, writer):
 
     print("Send: %r" % answer)
     writer.write(json.dumps(answer).encode('ascii'))
-    yield from writer.drain()
+    await writer.drain()
 
     print("Close the client socket")
     writer.close()
