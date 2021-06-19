@@ -14,5 +14,9 @@ async def main():
         print(html)
 
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(main())
+# for < python 3.7
+# loop = asyncio.get_event_loop()
+# loop.run_until_complete(main())
+
+# for >= python 3.7
+asyncio.run(main())

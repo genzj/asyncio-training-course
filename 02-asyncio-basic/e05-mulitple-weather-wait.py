@@ -65,12 +65,14 @@ async def openweathermap(session, city):
 async def main():
     answer = dict()
     async with aiohttp.ClientSession() as session:
-        done, pending = await asyncio.wait([
-            hefeng(session, 'Shanghai'),
-            openweathermap(session, 'Shanghai'),
+        done, _ = await asyncio.wait([
+            asyncio.create_task(hefeng(session, 'Shanghai')),
+            asyncio.create_task(openweathermap(session, 'Shanghai')),
         ])
         for task in done:
             data = task.result()
+            # or
+            # data = await task
             answer[data['source']] = data['result']
     return answer
 

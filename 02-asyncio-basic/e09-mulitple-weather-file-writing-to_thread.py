@@ -2,6 +2,8 @@
 import asyncio
 import base64
 import hashlib
+import json
+import time
 from datetime import datetime
 from pprint import pprint
 
@@ -42,7 +44,7 @@ async def hefeng(session, city):
     }
     params['sign'] = sign(params, 'd5bd328dd36844bbb20c0e4905568e8e')
 
-    return await fetch(session, url, params)
+    return {'source': 'hefeng', 'result': await fetch(session, url, params)}
 
 
 async def openweathermap(session, city):
@@ -53,27 +55,42 @@ async def openweathermap(session, city):
         "appid": "18bc2f96c466fc82cd607d43eb152055",
         "units": "metric",
     }
-    return await fetch(session, url, params)
+    return {
+        'source': 'openweathermap',
+        'result': await fetch(session, url, params)
+    }
 
 
-async def main():
+async def main(loop):
+    answer = dict()
     async with aiohttp.ClientSession() as session:
-        tasks = {
-            "hefeng": hefeng(session, 'Shanghai'),
-            "openweathermap": openweathermap(session, 'Shanghai')
-        }
-        answer = {}
-        names = list(tasks.keys())
-        coroutines = list(tasks.values())
-        for name, result in zip(names, await asyncio.gather(*coroutines)):
-            answer[name] = result
+        done = await asyncio.gather(
+            hefeng(session, 'Shanghai'),
+            openweathermap(session, 'Shanghai'),
+        )
+        writes = []
+        for data in done:
+            source = data['source']
+            result = data['result']
+            answer[source] = result
+            writes.append(
+                asyncio.to_thread(write_file, source, result)
+            )
+            # write_file(source, result)
+        await asyncio.gather(*writes)
     return answer
+
+
+def write_file(source, result):
+    with open('%s.json' % (source,), 'w', encoding='utf-8') as out:
+        json.dump(result, out, ensure_ascii=False, indent=2, sort_keys=True)
+    time.sleep(3)
 
 
 def run():
     loop = asyncio.get_event_loop()
     before = datetime.now()
-    answer = loop.run_until_complete(main())
+    answer = loop.run_until_complete(main(loop))
     done = datetime.now()
     pprint(answer)
     print('%ss elapsed' % ((done - before).total_seconds()))

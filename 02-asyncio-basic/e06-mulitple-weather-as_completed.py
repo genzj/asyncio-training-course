@@ -42,7 +42,10 @@ async def hefeng(session, city):
     }
     params['sign'] = sign(params, 'd5bd328dd36844bbb20c0e4905568e8e')
 
-    return await fetch(session, url, params)
+    return {
+        'source': 'hefeng',
+        'result': await fetch(session, url, params)
+    }
 
 
 async def openweathermap(session, city):
@@ -53,20 +56,21 @@ async def openweathermap(session, city):
         "appid": "18bc2f96c466fc82cd607d43eb152055",
         "units": "metric",
     }
-    return await fetch(session, url, params)
+    return {
+        'source': 'openweathermap',
+        'result': await fetch(session, url, params)
+    }
 
 
 async def main():
+    answer = dict()
     async with aiohttp.ClientSession() as session:
-        tasks = {
-            "hefeng": hefeng(session, 'Shanghai'),
-            "openweathermap": openweathermap(session, 'Shanghai')
-        }
-        answer = {}
-        names = list(tasks.keys())
-        coroutines = list(tasks.values())
-        for name, result in zip(names, await asyncio.gather(*coroutines)):
-            answer[name] = result
+        for task in asyncio.as_completed([
+                hefeng(session, 'Shanghai'),
+                openweathermap(session, 'Shanghai'),
+        ]):
+            data = await task
+            answer[data['source']] = data['result']
     return answer
 
 

@@ -142,3 +142,8 @@ logs/
 /mnist-data/
 !/imagenet/.gitkeep
 !/mnist-data/.gitkeep
+
+.vscode/
+
+hefeng.json
+openweathermap.json

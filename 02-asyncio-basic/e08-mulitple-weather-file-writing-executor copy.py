@@ -3,7 +3,6 @@ import asyncio
 import base64
 import hashlib
 import json
-import logging
 import time
 from datetime import datetime
 from pprint import pprint
@@ -45,10 +44,7 @@ async def hefeng(session, city):
     }
     params['sign'] = sign(params, 'd5bd328dd36844bbb20c0e4905568e8e')
 
-    return {
-        'source': 'hefeng',
-        'result': await fetch(session, url, params)
-    }
+    return {'source': 'hefeng', 'result': await fetch(session, url, params)}
 
 
 async def openweathermap(session, city):
@@ -68,27 +64,27 @@ async def openweathermap(session, city):
 async def main(loop):
     answer = dict()
     async with aiohttp.ClientSession() as session:
-        done, pending = await asyncio.wait([
+        done = await asyncio.gather(
             hefeng(session, 'Shanghai'),
             openweathermap(session, 'Shanghai'),
-        ])
+        )
         writes = []
-        for task in done:
-            data = task.result()
+        for data in done:
             source = data['source']
             result = data['result']
             answer[source] = result
-            writes.append(loop.run_in_executor(None, write_file, source, result))
+            writes.append(
+                loop.run_in_executor(None, write_file, source, result)
+            )
             # write_file(source, result)
-        await asyncio.wait(writes)
-    time.sleep(1)
+        await asyncio.gather(*writes)
     return answer
 
 
 def write_file(source, result):
     with open('%s.json' % (source,), 'w', encoding='utf-8') as out:
         json.dump(result, out, ensure_ascii=False, indent=2, sort_keys=True)
-    time.sleep(1)
+    time.sleep(3)
 
 
 def run():
@@ -100,12 +96,5 @@ def run():
     print('%ss elapsed' % ((done - before).total_seconds()))
 
 
-def enable_debug():
-    loop = asyncio.get_event_loop()
-    loop.set_debug(1)
-    logging.getLogger('asyncio').setLevel(logging.DEBUG)
-
-
 if __name__ == '__main__':
-    enable_debug()
     run()

@@ -2,8 +2,6 @@
 import asyncio
 import base64
 import hashlib
-import json
-import time
 from datetime import datetime
 from pprint import pprint
 
@@ -35,7 +33,7 @@ async def fetch(session, url, params):
         return await response.json()
 
 
-async def hefeng(session, city):
+async def hefeng(session, city, queue):
     url = 'https://free-api.heweather.com/s6/weather/now'
     params = {
         "location": city,
@@ -44,13 +42,13 @@ async def hefeng(session, city):
     }
     params['sign'] = sign(params, 'd5bd328dd36844bbb20c0e4905568e8e')
 
-    return {
+    await queue.put({
         'source': 'hefeng',
         'result': await fetch(session, url, params)
-    }
+    })
 
 
-async def openweathermap(session, city):
+async def openweathermap(session, city, queue):
     url = 'https://api.openweathermap.org/data/2.5/weather'
 
     params = {
@@ -58,41 +56,28 @@ async def openweathermap(session, city):
         "appid": "18bc2f96c466fc82cd607d43eb152055",
         "units": "metric",
     }
-    return {
+    await queue.put({
         'source': 'openweathermap',
         'result': await fetch(session, url, params)
-    }
+    })
 
 
-async def main(loop):
+async def main():
     answer = dict()
+    queue = asyncio.Queue()
     async with aiohttp.ClientSession() as session:
-        done, pending = await asyncio.wait([
-            hefeng(session, 'Shanghai'),
-            openweathermap(session, 'Shanghai'),
-        ])
-        writes = []
-        for task in done:
-            data = task.result()
-            source = data['source']
-            result = data['result']
-            answer[source] = result
-            writes.append(loop.run_in_executor(None, write_file, source, result))
-            # write_file(source, result)
-        await asyncio.wait(writes)
+        asyncio.create_task(hefeng(session, 'Shanghai', queue))
+        asyncio.create_task(openweathermap(session, 'Shanghai', queue))
+        for _ in range(2):
+            data = await queue.get()
+            answer[data['source']] = data['result']
     return answer
-
-
-def write_file(source, result):
-    with open('%s.json' % (source,), 'w', encoding='utf-8') as out:
-        json.dump(result, out, ensure_ascii=False, indent=2, sort_keys=True)
-    time.sleep(1)
 
 
 def run():
     loop = asyncio.get_event_loop()
     before = datetime.now()
-    answer = loop.run_until_complete(main(loop))
+    answer = loop.run_until_complete(main())
     done = datetime.now()
     pprint(answer)
     print('%ss elapsed' % ((done - before).total_seconds()))
