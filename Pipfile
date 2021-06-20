@@ -11,6 +11,8 @@ pandas = "*"
 flask = "*"
 dnspython = "*"
 requests = "*"
+fastapi = "*"
+uvicorn = {extras = ["standard"], version = "*"}
 
 [dev-packages]
 
