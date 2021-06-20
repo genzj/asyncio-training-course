@@ -1,60 +1,62 @@
 # -*- encoding: utf-8 -*-
 from datetime import datetime, timedelta
 
+IDLE = 'IDLE'
+
 
 def simulate_sleep(n):
     enter = datetime.utcnow()
     to = enter + timedelta(seconds=n)
     while datetime.utcnow() < to:
-        yield
+        yield IDLE
 
 
 def create():
-    for _ in simulate_sleep(3.0):
-        yield
+    yield simulate_sleep(3.0)
     print(datetime.utcnow(), "(1) create file")
 
 
 def write():
-    for _ in simulate_sleep(1.0):
-        yield
+    yield simulate_sleep(1.0)
     print(datetime.utcnow(), "(2) write into file")
 
 
 def close():
     print(datetime.utcnow(), "(3) close file")
-    yield
+    yield IDLE
 
 
-def schedule(*tasks):
+def schedule(task):
+    polling_io = 0
+    all_tasks = (task,)
     before = datetime.utcnow()
     print(before, 'scheduling begin')
-    while tasks:
-        current, rest = tasks[0], tasks[1:]
+    while all_tasks:
+        current, rest = all_tasks[0], all_tasks[1:]
         try:
-            next(current)
+            child = next(current)
         except StopIteration:
             print('task %s ends' % (current,))
-            tasks = rest
+            all_tasks = rest
         else:
-            tasks = rest + (current,)
+            if child is IDLE:
+                # idle is a special state reserved for IO polling
+                polling_io += 1
+            else:
+                all_tasks = (child, current,) + rest
     done = datetime.utcnow()
-    print(done, 'scheduling done, %ss elapsed' % ((done - before).total_seconds(),))
+    print(
+        done,
+        'scheduling done, %ss elapsed' % ((done - before).total_seconds(),)
+    )
+    print(f'IO polling happened {polling_io} times')
 
 
 def chain():
-    for _ in create():
-        yield _
-    for _ in write():
-        yield _
-    for _ in close():
-        yield _
-    print(datetime.utcnow(), 'all task done')
-
-
-def fan_out():
-    return [create(), write(), close()]
+    yield create()
+    yield write()
+    yield close()
+    print(datetime.utcnow(), 'tasks completed')
 
 
 schedule(chain())
-schedule(*fan_out())
