@@ -34,7 +34,7 @@ async def fetch(session, url, params):
 async def hefeng(session):
     url = 'https://devapi.qweather.com/v7/weather/now'
     params = {
-        "location": "101020100", # LocationID of Shanghai
+        "location": "101020100",  # LocationID of Shanghai
         "publicid": "HE1601211533111623",
         "t": str(utctimestamp())
     }
