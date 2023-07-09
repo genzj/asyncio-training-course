@@ -1,6 +1,5 @@
 # -*- encoding: utf-8 -*-
 import asyncio
-import base64
 import hashlib
 import json
 import logging
@@ -27,8 +26,7 @@ def sign(params, secret):
             to_sign += k + '=' + v + '&'
     to_sign = to_sign[:-1]
     to_sign += secret
-    md5 = hashlib.md5(to_sign.encode('utf-8')).digest()
-    return base64.b64encode(md5).decode('ascii')
+    return hashlib.md5(to_sign.encode('utf-8')).hexdigest()
 
 
 async def fetch(session, url, params):
@@ -36,54 +34,54 @@ async def fetch(session, url, params):
         return await response.json()
 
 
-async def hefeng(session, city):
-    url = 'https://free-api.heweather.com/s6/weather/now'
+async def hefeng(session):
+    url = 'https://devapi.qweather.com/v7/weather/now'
     params = {
-        "location": city,
-        "username": "HE1601211533111623",
+        "location": "101020100",  # LocationID of Shanghai
+        "publicid": "HE1601211533111623",
         "t": str(utctimestamp())
     }
     params['sign'] = sign(params, 'd5bd328dd36844bbb20c0e4905568e8e')
 
-    return {'source': 'hefeng', 'result': await fetch(session, url, params)}
+    data = await fetch(session, url, params)
+    write_file_sync("hefeng", data)
+    # await write_file_async("hefeng", data)
+    return data
 
 
-async def openweathermap(session, city):
+async def openweathermap(session):
     url = 'https://api.openweathermap.org/data/2.5/weather'
 
     params = {
-        "q": city,
+        "q": "Shanghai",
         "appid": "18bc2f96c466fc82cd607d43eb152055",
         "units": "metric",
     }
-    return {
-        'source': 'openweathermap',
-        'result': await fetch(session, url, params)
-    }
+    data = await fetch(session, url, params)
+    write_file_sync("openweathermap", data)
+    # await write_file_async("openweathermap", data)
+    return data
 
 
-async def main(loop):
-    answer = dict()
+async def main():
     async with aiohttp.ClientSession() as session:
-        done = await asyncio.gather(
-            hefeng(session, 'Shanghai'),
-            openweathermap(session, 'Shanghai'),
-        )
-        writes = []
-        for data in done:
-            source = data['source']
-            result = data['result']
-            answer[source] = result
-            writes.append(
-                loop.run_in_executor(None, write_file, source, result)
-            )
-            # write_file(source, result)
-        await asyncio.wait(writes)
-    time.sleep(1)
+        tasks = {
+            "hefeng": hefeng(session),
+            "openweathermap": openweathermap(session),
+        }
+        answer = {}
+        names = list(tasks.keys())
+        coroutines = list(tasks.values())
+        for name, result in zip(names, await asyncio.gather(*coroutines)):
+            answer[name] = result
     return answer
 
 
-def write_file(source, result):
+async def write_file_async(source, result):
+    await asyncio.to_thread(write_file_sync, source, result)
+
+
+def write_file_sync(source, result):
     with open('%s.json' % (source,), 'w', encoding='utf-8') as out:
         json.dump(result, out, ensure_ascii=False, indent=2, sort_keys=True)
     time.sleep(3)
@@ -92,7 +90,7 @@ def write_file(source, result):
 def run():
     loop = asyncio.get_event_loop()
     before = datetime.now()
-    answer = loop.run_until_complete(main(loop))
+    answer = loop.run_until_complete(main())
     done = datetime.now()
     pprint(answer)
     print('%ss elapsed' % ((done - before).total_seconds()))
