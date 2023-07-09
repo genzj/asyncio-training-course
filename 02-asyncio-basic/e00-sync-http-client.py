@@ -8,7 +8,7 @@ def fetch(session: requests.Session, url):
 
 def main():
     with requests.session() as session:
-        html = fetch(session, 'http://python.org')
+        html = fetch(session, 'https://python.org')
         print(html)
 
 

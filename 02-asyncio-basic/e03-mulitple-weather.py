@@ -58,7 +58,7 @@ async def main():
     async with aiohttp.ClientSession() as session:
         answer = {
             "hefeng": await hefeng(session),
-            "openweathermap": await openweathermap(session)
+            "openweathermap": await openweathermap(session),
         }
     return answer
 
