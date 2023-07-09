@@ -9,7 +9,6 @@ numpy = "*"
 pandas = "*"
 "gprof2dot" = "*"
 flask = "*"
-dnspython = "*"
 requests = "*"
 fastapi = "*"
 uvicorn = {extras = ["standard"], version = "*"}
