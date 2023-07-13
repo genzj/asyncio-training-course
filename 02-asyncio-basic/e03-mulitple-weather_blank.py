@@ -1,4 +1,7 @@
 # -*- encoding: utf-8 -*-
+
+# online IDE: https://trinket.io/python3/b26e732a48
+
 import asyncio
 import hashlib
 from datetime import datetime
